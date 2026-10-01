@@ -7,9 +7,11 @@
 ![Dash](https://img.shields.io/badge/Dash-Plotly-3F4F75?logo=plotly&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-Pipeline de datos en tiempo real sobre **Valenbisi**, el servicio de bicicleta compartida de Valencia. Cada 5 minutos descarga el estado de todas las estaciones desde la API de datos abiertos del Ayuntamiento, guarda el dato bruto en **MongoDB** y el dato estructurado en **PostgreSQL**, lo transforma con **dbt** y lo muestra en un **mapa interactivo** que se actualiza solo.
+Pipeline de datos en tiempo real sobre **Valenbisi**, el servicio de bicicleta compartida de Valencia. Cada 5 minutos descarga el estado de las **273 estaciones** desde el Geoportal del Ayuntamiento, guarda el dato bruto en **MongoDB** y el dato estructurado en **PostgreSQL**, lo transforma con **dbt** y lo muestra en un **mapa interactivo** que se actualiza solo.
 
 Todo arranca con un único `docker compose up`.
+
+![Mapa de las 273 estaciones de Valenbisi coloreadas según las bicis disponibles](docs/mapa.jpg)
 
 ---
 
@@ -17,7 +19,7 @@ Todo arranca con un único `docker compose up`.
 
 ```mermaid
 flowchart LR
-    API[API Open Data<br/>Ayuntamiento de Valencia] -->|cada 5 min| C[collector<br/>Python]
+    API[Geoportal<br/>Ayuntamiento de València] -->|cada 5 min| C[collector<br/>Python]
     C -->|JSON bruto| M[(MongoDB<br/>capa raw)]
     C -->|filas limpias| P[(PostgreSQL<br/>valenbisi_raw)]
     P -->|dbt run| T[(uso_horario<br/>media por estación y hora)]
@@ -34,7 +36,7 @@ flowchart LR
 
 ### Por qué dos bases de datos
 
-MongoDB guarda el JSON tal y como llega: si la API cambia de formato (ya ha pasado, por ejemplo con las coordenadas), el histórico se puede reprocesar sin perder nada. PostgreSQL guarda solo lo necesario en un esquema fijo, que es lo que necesita dbt para modelar y el dashboard para consultar rápido.
+MongoDB guarda el JSON tal y como llega: si la fuente cambia de formato (ya ha pasado: el portal de datos abiertos se trasladó al Geoportal y cambió la estructura del JSON), el histórico se puede reprocesar sin perder nada. PostgreSQL guarda solo lo necesario en un esquema fijo, que es lo que necesita dbt para modelar y el dashboard para consultar rápido.
 
 ---
 
@@ -78,7 +80,7 @@ docker compose run --rm --entrypoint dbt transform test
 
 ## Datos
 
-Fuente: [Valenbisi: disponibilidad](https://valencia.opendatasoft.com/explore/dataset/valenbisi-disponibilitat-valenbisi-dsiponibilidad/), portal de datos abiertos del Ayuntamiento de Valencia.
+Fuente: [ValenBisi Disponibilidad](https://opendata.vlci.valencia.es/dataset/valenbisi-disponibilitat-valenbisi-dsiponibilidad), portal de datos abiertos del Ayuntamiento de València. El colector consulta su servicio del Geoportal, que devuelve todas las estaciones en GeoJSON. Las horas se guardan en hora local de València.
 
 ## Autor
 
