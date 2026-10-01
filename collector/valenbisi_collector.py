@@ -3,6 +3,7 @@ import psycopg2
 import time
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pymongo import MongoClient # Importante para NoSQL
 
 # Variables de entorno (vienen del docker-compose.yml)
@@ -13,14 +14,22 @@ DB_PASS = os.getenv('DB_PASS', 'password')
 # URI para MongoDB: el nombre del servicio es 'mongodb'
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://mongodb:27017/')
 
+def hora_valencia():
+    """Hora local de València sin zona horaria: el contenedor va en UTC y
+    sin esto todas las lecturas quedarían desplazadas una o dos horas."""
+    return datetime.now(ZoneInfo('Europe/Madrid')).replace(tzinfo=None)
+
 def fetch_data():
-    # URL correcta de la API de Valencia (con el typo 'dsiponibilidad')
-    url = "https://valencia.opendatasoft.com/api/explore/v2.1/catalog/datasets/valenbisi-disponibilitat-valenbisi-dsiponibilidad/records?limit=100"
+    # Geoportal del Ayuntamiento de València (capa 228 de Tráfico). Sustituye a la
+    # antigua API de Opendatasoft, que dejó de existir. Devuelve todas las
+    # estaciones en una sola llamada, en GeoJSON con coordenadas WGS84.
+    url = ("https://geoportal.valencia.es/server/rest/services/OPENDATA/Trafico/MapServer/228/query"
+           "?where=1%3D1&outFields=*&outSR=4326&f=geojson")
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=30)
         # Verificamos si la respuesta es correcta
         if r.status_code == 200:
-            return r.json()['results']
+            return r.json()['features']
         else:
             print(f"Error API status: {r.status_code}")
             return []
@@ -53,29 +62,29 @@ def save_to_sql(results):
         conn = psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
         cur = conn.cursor()
         
-        for station in results:
-            # La nueva API usa geo_point_2d en lugar de geometry.coordinates
-            lat = station['geo_point_2d']['lat']
-            lon = station['geo_point_2d']['lon']
-            
-            # El campo 'name' ahora se llama 'address'
+        for feature in results:
+            # Cada estación es un Feature de GeoJSON: datos en 'properties'
+            # y coordenadas [longitud, latitud] en 'geometry'
+            station = feature['properties']
+            lon, lat = feature['geometry']['coordinates']
+
             station_name = station.get('address', 'Unknown')
-            
-            # El campo 'status' ahora se llama 'open' (T/F)
+
+            # 'open' viene como T/F
             station_status = 'OPEN' if station.get('open') == 'T' else 'CLOSED'
-            
+
             cur.execute("""
                 INSERT INTO valenbisi_raw (station_id, station_name, latitude, longitude, available_bikes, available_slots, station_status, timestamp)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                station['number'], 
-                station_name, 
-                lat, 
-                lon, 
-                station['available'], 
-                station['free'], 
-                station_status, 
-                datetime.now()
+                station['number'],
+                station_name,
+                lat,
+                lon,
+                station['available'],
+                station['free'],
+                station_status,
+                hora_valencia()
             ))
         
         conn.commit()
