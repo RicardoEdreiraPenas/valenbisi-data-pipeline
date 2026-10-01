@@ -58,7 +58,7 @@ services:
     environment:
       DB_PASS: ${POSTGRES_PASSWORD:-password}
     command: >
-      sh -c "pip install --no-cache-dir dash pandas plotly sqlalchemy psycopg2-binary && python app.py"
+      sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
     depends_on:
       - db
 

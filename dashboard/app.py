@@ -60,17 +60,19 @@ def update_graph_live(n):
             )
             return fig
 
-        fig = px.scatter_mapbox(df, 
+        fig = px.scatter_map(df,
                                 lat="latitude", 
                                 lon="longitude", 
                                 color="bicis_promedio",
                                 size="bicis_promedio",
                                 hover_name="station_name",
                                 color_continuous_scale=px.colors.cyclical.IceFire,
-                                zoom=12, 
+                                # scatter_map no se centra solo: centro en las estaciones
+                                center={"lat": df["latitude"].mean(), "lon": df["longitude"].mean()},
+                                zoom=12,
                                 height=700)
         
-        fig.update_layout(mapbox_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
+        fig.update_layout(map_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
         return fig
     except Exception as e:
         print(f"Error: {e}")
