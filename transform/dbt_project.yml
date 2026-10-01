@@ -1,0 +1,9 @@
+name: 'valenbisi_transform'
+version: '1.0.0'
+config-version: 2
+profile: 'valenbisi_profile'
+model-paths: ["models"]
+
+models:
+  valenbisi_transform:
+    materialized: table

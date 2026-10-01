@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:15
+    container_name: valenbisi_db
+    environment:
+      POSTGRES_DB: valenbisi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  mongodb:
+    image: mongo:latest
+    container_name: valenbisi_nosql
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  collector:
+    build: ./collector
+    container_name: valenbisi_collector
+    depends_on:
+      - db
+      - mongodb
+    environment:
+      DB_HOST: db
+      DB_NAME: valenbisi
+      DB_USER: postgres
+      DB_PASS: ${POSTGRES_PASSWORD:-password}
+      MONGO_URI: mongodb://mongodb:27017/
+
+  transform:
+    platform: linux/amd64
+    image: ghcr.io/dbt-labs/dbt-postgres:1.5.0
+    container_name: valenbisi_transform
+    volumes:
+      - ./transform:/usr/app
+    environment:
+      DBT_PROFILES_DIR: /usr/app
+      DB_PASS: ${POSTGRES_PASSWORD:-password}
+    working_dir: /usr/app
+    entrypoint: [ "dbt", "run" ]
+    depends_on:
+      - db
+
+  dashboard:
+    platform: linux/amd64
+    image: python:3.10-slim
+    container_name: valenbisi_dashboard
+    volumes:
+      - ./dashboard:/usr/app
+    working_dir: /usr/app
+    ports:
+      - "8050:8050"
+    environment:
+      DB_PASS: ${POSTGRES_PASSWORD:-password}
+    command: >
+      sh -c "pip install --no-cache-dir dash pandas plotly sqlalchemy psycopg2-binary && python app.py"
+    depends_on:
+      - db
+
+volumes:
+  mongo_data:

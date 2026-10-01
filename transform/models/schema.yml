@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: uso_horario
+    description: "Ocupación media por estación de Valenbisi y hora"
+    columns:
+      - name: station_id
+        description: "Identificador de la estación"
+        tests:
+          - not_null
+      - name: hora
+        description: "Hora truncada de la lectura"
+        tests:
+          - not_null
+      - name: bicis_promedio
+        description: "Bicicletas disponibles de media en esa hora"
+      - name: huecos_promedio
+        description: "Anclajes libres de media en esa hora"
