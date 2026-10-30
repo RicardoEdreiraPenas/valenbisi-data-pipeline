@@ -1,0 +1,23 @@
+# Revisión semanal de dependencias: paquetes de Python e imágenes de Docker
+# (Dockerfile y docker-compose.yml).
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/collector"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "/dashboard"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/collector"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
