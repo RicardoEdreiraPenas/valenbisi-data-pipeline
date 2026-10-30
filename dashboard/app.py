@@ -3,13 +3,21 @@ from dash import dcc, html, Input, Output
 import plotly.express as px
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
 import os
+import sys
 import time
 
 # Conexión a la base de datos de Docker
-# El host 'db' coincide con el nombre del servicio en docker-compose
-DB_PASS = os.getenv('DB_PASS', 'password')
-engine = create_engine(f'postgresql://postgres:{DB_PASS}@db:5432/valenbisi')
+# El host 'db' coincide con el nombre del servicio en docker-compose.
+# La contraseña es obligatoria: sin ella no se arranca con un valor por defecto.
+DB_PASS = os.getenv('DB_PASS')
+if not DB_PASS:
+    sys.exit("ERROR: falta la variable de entorno DB_PASS. "
+             "Copia .env.example como .env y define POSTGRES_PASSWORD.")
+# URL.create escapa la contraseña, que puede llevar caracteres como / o +
+engine = create_engine(URL.create('postgresql', username='postgres', password=DB_PASS,
+                                  host='db', port=5432, database='valenbisi'))
 
 app = dash.Dash(__name__)
 
