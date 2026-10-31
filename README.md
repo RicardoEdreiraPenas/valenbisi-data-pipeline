@@ -1,6 +1,6 @@
 # 🚲 Valenbisi Data Pipeline
 
-![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-raw-47A248?logo=mongodb&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-postgres-FF694B?logo=dbt&logoColor=white)
@@ -47,21 +47,39 @@ Requisito: Docker Desktop.
 ```bash
 git clone https://github.com/RicardoEdreiraPenas/valenbisi-data-pipeline.git
 cd valenbisi-data-pipeline
-cp .env.example .env          # opcional: cambia la contraseña local
+cp .env.example .env
+```
+
+Edita `.env` y pon una contraseña para PostgreSQL y otra para MongoDB. Puedes generarlas con `openssl rand -base64 24`. Si falta alguna, `docker compose` no arranca y dice qué variable falta.
+
+```bash
 docker compose up --build
 ```
 
 | Servicio | Dirección |
 | --- | --- |
-| Dashboard | http://localhost:8050 |
-| PostgreSQL | localhost:5432 |
-| MongoDB | localhost:27017 |
+| Dashboard | http://127.0.0.1:8050 |
+| PostgreSQL | 127.0.0.1:5432 (usuario `postgres`) |
+| MongoDB | 127.0.0.1:27017 (usuario de `MONGO_USER`) |
 
 El collector espera unos segundos a que las bases de datos estén listas y empieza a descargar. Para actualizar la capa transformada con los datos nuevos:
 
 ```bash
 docker compose run --rm transform          # dbt run
 docker compose run --rm --entrypoint dbt transform test
+```
+
+## Seguridad
+
+- No hay contraseñas por defecto. Se leen de `.env`, que está en `.gitignore`; si faltan, `docker compose` no arranca y el colector y el dashboard se detienen con un mensaje que dice qué variable falta.
+- MongoDB funciona con autenticación: el usuario administrador se crea en el primer arranque a partir de `MONGO_USER` y `MONGO_PASSWORD`.
+- Los puertos se publican solo en `127.0.0.1`, así que las bases de datos y el dashboard no son accesibles desde otros equipos de la red.
+- Las imágenes de Docker y las dependencias de Python tienen la versión fijada, y Dependabot revisa cada semana si hay actualizaciones.
+
+Si ya tenías el proyecto en marcha con la configuración anterior, MongoDB solo crea el usuario cuando el volumen está vacío. Para empezar de cero (se borran los datos guardados):
+
+```bash
+docker compose down -v
 ```
 
 ## Modelo dbt

@@ -1,3 +1,7 @@
+# Las contraseñas se leen del archivo .env (ver .env.example). Si falta alguna,
+# docker compose se niega a arrancar en lugar de usar un valor por defecto.
+# Los puertos se publican solo en 127.0.0.1: accesibles desde este equipo,
+# no desde la red local.
 services:
   db:
     image: postgres:15
@@ -5,17 +9,22 @@ services:
     environment:
       POSTGRES_DB: valenbisi
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   mongodb:
-    image: mongo:latest
+    image: mongo:8.0
     container_name: valenbisi_nosql
+    environment:
+      # Con estas dos variables la imagen crea el usuario administrador en el
+      # primer arranque y activa la autenticación.
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?Define MONGO_USER en el archivo .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Define MONGO_PASSWORD en el archivo .env}
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db
 
@@ -29,8 +38,10 @@ services:
       DB_HOST: db
       DB_NAME: valenbisi
       DB_USER: postgres
-      DB_PASS: ${POSTGRES_PASSWORD:-password}
+      DB_PASS: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
       MONGO_URI: mongodb://mongodb:27017/
+      MONGO_USER: ${MONGO_USER:?Define MONGO_USER en el archivo .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Define MONGO_PASSWORD en el archivo .env}
 
   transform:
     platform: linux/amd64
@@ -40,7 +51,7 @@ services:
       - ./transform:/usr/app
     environment:
       DBT_PROFILES_DIR: /usr/app
-      DB_PASS: ${POSTGRES_PASSWORD:-password}
+      DB_PASS: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
     working_dir: /usr/app
     entrypoint: [ "dbt", "run" ]
     depends_on:
@@ -48,15 +59,15 @@ services:
 
   dashboard:
     platform: linux/amd64
-    image: python:3.10-slim
+    image: python:3.12-slim
     container_name: valenbisi_dashboard
     volumes:
       - ./dashboard:/usr/app
     working_dir: /usr/app
     ports:
-      - "8050:8050"
+      - "127.0.0.1:8050:8050"
     environment:
-      DB_PASS: ${POSTGRES_PASSWORD:-password}
+      DB_PASS: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
     depends_on:

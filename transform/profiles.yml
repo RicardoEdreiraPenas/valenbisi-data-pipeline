@@ -5,7 +5,10 @@ valenbisi_profile:
       type: postgres
       host: db
       user: postgres
-      password: "{{ env_var('DB_PASS', 'password') }}"
+      # Sin valor por defecto. Con docker compose, si falta POSTGRES_PASSWORD
+      # en .env el servicio ni arranca; fuera de Docker, sin DB_PASS la
+      # conexión falla por contraseña incorrecta.
+      password: "{{ env_var('DB_PASS') }}"
       port: 5432
       dbname: valenbisi
       schema: public

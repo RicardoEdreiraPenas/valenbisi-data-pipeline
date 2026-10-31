@@ -2,17 +2,31 @@ import requests
 import psycopg2
 import time
 import os
+import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pymongo import MongoClient # Importante para NoSQL
+
+def variable_obligatoria(nombre):
+    """Lee una variable de entorno que no puede faltar (contraseñas, usuarios).
+    No hay valor por defecto a propósito: si falta, el servicio se para con un
+    mensaje claro en vez de conectarse con una contraseña conocida."""
+    valor = os.getenv(nombre)
+    if not valor:
+        sys.exit(f"ERROR: falta la variable de entorno {nombre}. "
+                 "Copia .env.example como .env y define las contraseñas.")
+    return valor
 
 # Variables de entorno (vienen del docker-compose.yml)
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_NAME = os.getenv('DB_NAME', 'valenbisi')
 DB_USER = os.getenv('DB_USER', 'postgres')
-DB_PASS = os.getenv('DB_PASS', 'password')
-# URI para MongoDB: el nombre del servicio es 'mongodb'
+DB_PASS = variable_obligatoria('DB_PASS')
+# URI para MongoDB: el nombre del servicio es 'mongodb'. El usuario y la
+# contraseña van aparte para no tener que escapar caracteres especiales en la URI.
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://mongodb:27017/')
+MONGO_USER = variable_obligatoria('MONGO_USER')
+MONGO_PASSWORD = variable_obligatoria('MONGO_PASSWORD')
 
 def hora_valencia():
     """Hora local de València sin zona horaria: el contenedor va en UTC y
@@ -40,7 +54,7 @@ def fetch_data():
 def save_to_nosql(data):
     """Guarda el JSON bruto en MongoDB"""
     try:
-        client = MongoClient(MONGO_URI)
+        client = MongoClient(MONGO_URI, username=MONGO_USER, password=MONGO_PASSWORD)
         db = client["valenbisi_raw_db"]
         collection = db["stations_history"]
         
